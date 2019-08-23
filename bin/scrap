@@ -1,0 +1,60 @@
+#!/usr/bin/env node
+
+const helper = require('../helpers/helper');
+const config = require('../config/dev');
+const fs = require('fs');
+
+scrap();
+
+function scrap() {
+    let page = 1;
+    let loop = setInterval(function() {
+        return getPage(page)
+            .then(data=>{
+                if(!data) {
+                    return clearInterval(loop);
+                }
+                page++;
+            })
+    }, 60000);
+}
+
+function getPage(num) {
+    let users = [];
+    let page = config.listUsers + num;
+    let path = config.store + "store.json";
+    return helper.get(page)
+        .then(data=>{
+            if(!data.data) {
+                return false
+            }
+            users = data.data;
+            return new Promise(function(resolve,reject){
+                fs.readFile(path, 'utf8', function(err, contents) {
+                    if(err) {
+                        return resolve(false);
+                    }
+                    return resolve(contents);
+                });
+            })
+        })
+        .then(data=>{
+            if(users.length === 0) {
+                return false
+            }
+            let userList = [];
+            if(data) {
+                userList = JSON.parse(data)
+            }
+            userList.push(...users);
+            let dataFile = JSON.stringify(userList, null, 4);
+            return new Promise(function(resolve,reject){
+                fs.writeFile(path, dataFile, function(err) {
+                    if(err) {
+                        return resolve(false);
+                    }
+                    return resolve(users)
+                });
+            })
+        })
+}
